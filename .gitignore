@@ -1,7 +1,3 @@
-# Objects.
-.scons-cache/
-*.os
-
 # SConstruct
 .sconf_temp
 .sconsign.dblite

@@ -21,12 +21,6 @@ addon_path = Path(extension_path).parent
 # Find the project name from the gdextension file (e.g. example).
 project_name = Path(extension_path).stem
 
-# TODO: Cache is disabled currently.
-# scons_cache_path = os.environ.get("SCONS_CACHE")
-# if scons_cache_path != None:
-#     CacheDir(scons_cache_path)
-#     print("Scons cache enabled... (path: '" + scons_cache_path + "')")
-
 # Create the library target (e.g. libexample.linux.debug.x86_64.so).
 debug_or_release = "release" if env["target"] == "template_release" else "debug"
 if env["platform"] == "macos":

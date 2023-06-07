@@ -5,9 +5,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  get_godotcpp_version:
+    runs-on: ubuntu-20.04
+    name: Get Godot Cpp Submodule version for cache hash
+    outputs:
+      commit_hash: ${{ steps.get_hash.outputs.commit_hash }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - id: get_hash
+        name: Get Hash
+        shell: sh
+        run: |
+          cd "${{ github.workspace }}/godot-cpp"
+          echo commit_hash=$(git rev-parse --short HEAD) >> "$GITHUB_OUTPUT"
   build:
     runs-on: ${{ matrix.runner }}
     name: ${{ matrix.name }}
+    needs: get_godotcpp_version
     strategy:
       fail-fast: false
       matrix:
@@ -69,54 +85,58 @@ jobs:
           "$ANDROID_SDK_ROOT"/cmdline-tools/latest/bin/sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "build-tools;30.0.3" "platforms;android-29" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;21.4.7075529"
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
 
       - name: Set up SCons
         shell: bash
         run: |
-          python -c "import sys; print(sys.version)"
           python -m pip install scons
-          scons --version
 
       - name: Checkout project
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
 
-#       TODO: Cache doesn't work yet. SCons rebuilds the objects even if they already exist. Could be caused by modification dates or extension_api.json.
-#             fetch-depth: 0 May be needed for cache. See: <https://github.com/actions/checkout/issues/468>.
-#      - name: Set up SCons cache
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ${{ github.workspace }}/.scons-cache/
-#            ${{ github.workspace }}/**/.sconsign.dblite
-#            ${{ github.workspace }}/godot-cpp/gen/
-#          key: ${{ matrix.identifier }}-${{ github.ref }}-${{ github.sha }}
-#          restore-keys: |
-#            ${{ matrix.identifier }}-${{ github.ref }}-${{ github.sha }}
-#            ${{ matrix.identifier }}-${{ github.ref }}
-#            ${{ matrix.identifier }}
+      - name: Cache SCons Database
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/**/.sconsign.dblite
+          key: ${{ matrix.identifier }}-${{ needs.get_godotcpp_version.outputs.commit_hash }}-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.identifier }}-${{ needs.get_godotcpp_version.outputs.commit_hash }}-${{ github.ref }}-${{ github.sha }}
+            ${{ matrix.identifier }}-${{ needs.get_godotcpp_version.outputs.commit_hash }}-${{ github.ref }}
+            ${{ matrix.identifier }}-${{ needs.get_godotcpp_version.outputs.commit_hash }}
+
+      - name: Cache Godot Cpp
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/godot-cpp/gen/
+            ${{ github.workspace }}/godot-cpp/src/
+            ${{ github.workspace }}/godot-cpp/bin/
+          key: ${{ matrix.identifier }}-${{ needs.get_godotcpp_version.outputs.commit_hash }}
 
       - name: Compile extension
         shell: sh
-#        env:
-#          SCONS_CACHE: '${{ github.workspace }}/.scons-cache/'
-#          SCONS_CACHE_LIMIT: 8192
         run: |
-          scons target='${{ matrix.target }}' platform='${{ matrix.platform }}' arch='${{ matrix.arch }}' -j2
-          ls -l project/addons/*/bin/
+          scons target='${{ matrix.target }}' platform='${{ matrix.platform }}' arch='${{ matrix.arch }}'
 
-      - name: Copy extra files to addon
+      - name: Finalize directory structure
         shell: sh
         run: |
+          addons_output_dir=${{ github.workspace }}/addon-output/addons
           for addon in ${{ github.workspace }}/project/addons/*/; do
-            cp --no-clobber '${{ github.workspace }}/README.md' '${{ github.workspace }}/LICENSE' "$addon"
+            addon_output_dir=$addons_output_dir/$(basename $addon)
+            mkdir -p "$addon_output_dir/"
+            cp -a "$addon/" "$addons_output_dir/"
+            cp --no-clobber '${{ github.workspace }}/README.md' '${{ github.workspace }}/LICENSE' "$addon_output_dir/"
+            rm "$addon_output_dir/bin/.gitignore"
           done
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ github.event.repository.name }}
           path: |
-            ${{ github.workspace }}/project/
+            ${{ github.workspace }}/addon-output/
