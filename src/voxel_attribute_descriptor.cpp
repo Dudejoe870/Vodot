@@ -1,7 +1,5 @@
 #include "voxel_attribute_descriptor.hpp"
 
-#include <immintrin.h>
-
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/math.hpp>
 
