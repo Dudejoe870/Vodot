@@ -8,3 +8,6 @@
 
 # Object Files
 build/
+
+# Visual Studio Code
+.vscode/

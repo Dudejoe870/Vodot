@@ -1,0 +1,8 @@
+[gd_resource type="VoxelAttributeObject" load_steps=2 format=3 uid="uid://cqey0ubr00ll4"]
+
+[sub_resource type="VoxelAttributeDescriptor" id="VoxelAttributeDescriptor_prbpc"]
+name = "color"
+num_components = 4
+
+[resource]
+descriptors = Array[VoxelAttributeDescriptor]([SubResource("VoxelAttributeDescriptor_prbpc")])

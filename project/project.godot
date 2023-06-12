@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="Vodot Example"
+config/name="Vodot"
 run/main_scene="res://demo/scene.tscn"
 config/features=PackedStringArray("4.0", "Forward Plus")
 
 [dotnet]
 
-project/assembly_name="Vodot Example"
+project/assembly_name="Vodot"
